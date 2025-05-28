@@ -151,3 +151,4 @@ VITE_MAIN_SITE_URL=https://coffee-npc.vercel.app
 ## 라이센스
 
 MIT License
+# 최종 업데이트 완료
