@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
   Coffee, 
-  Nfc, 
   TrendingUp, 
-  Users, 
   Eye,
   ShoppingCart,
   Globe,
