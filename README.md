@@ -152,3 +152,4 @@ VITE_MAIN_SITE_URL=https://coffee-npc.vercel.app
 
 MIT License
 # 최종 업데이트 완료
+# 완전한 NFC 워크플로우 구현 완료
