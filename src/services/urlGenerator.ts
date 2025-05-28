@@ -38,7 +38,7 @@ export interface URLStats {
 }
 
 export class URLGeneratorService {
-  private config: URLConfig;
+  private config: URLConfig = { baseUrl: "https://m1ct.coffee", useShortUrl: true, enableQR: true, seoOptimized: true, urlPattern: "detailed" };
   private urlHistory: Array<{
     slug: string;
     beanId: string;
