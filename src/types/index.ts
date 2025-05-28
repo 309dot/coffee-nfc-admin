@@ -110,4 +110,161 @@ export interface AdminUser {
   name: string;
   role: 'admin' | 'manager';
   lastLogin: Date;
+}
+
+// 구글 시트 연동 관련 타입들
+export interface GoogleSheetsConfig {
+  spreadsheetId: string;
+  sheetName: string;
+  range: string;
+  apiKey?: string;
+  isConnected: boolean;
+  lastSync?: Date;
+  autoSync: boolean;
+  syncInterval: number; // 분 단위
+}
+
+export interface GoogleSheetsMapping {
+  name: string;
+  origin: string;
+  varieties: string;
+  process: string;
+  region: string;
+  altitude: string;
+  flavorNotes: string;
+  description: string;
+  story: string;
+  price: string;
+  stock: string;
+  isActive: string;
+}
+
+export interface SyncResult {
+  success: boolean;
+  message: string;
+  syncedCount: number;
+  errors: string[];
+  timestamp: Date;
+}
+
+export interface SyncHistory {
+  id: string;
+  timestamp: Date;
+  type: 'manual' | 'auto';
+  direction: 'import' | 'export' | 'bidirectional';
+  result: SyncResult;
+}
+
+// 분석 관련 타입들
+export interface NFCScanEvent {
+  id: string;
+  chipId: string;
+  beanId: string;
+  timestamp: Date;
+  location?: {
+    country: string;
+    city: string;
+    coordinates?: {
+      lat: number;
+      lng: number;
+    };
+  };
+  device?: {
+    type: 'mobile' | 'desktop' | 'tablet';
+    os: string;
+    browser: string;
+  };
+  userAgent?: string;
+  referrer?: string;
+  sessionId?: string;
+}
+
+export interface AnalyticsTimeRange {
+  start: Date;
+  end: Date;
+  period: 'hour' | 'day' | 'week' | 'month' | 'year';
+}
+
+export interface ScanAnalytics {
+  totalScans: number;
+  uniqueScans: number;
+  scansByPeriod: Array<{
+    period: string;
+    count: number;
+    uniqueCount: number;
+  }>;
+  scansByHour: Array<{
+    hour: number;
+    count: number;
+  }>;
+  scansByDay: Array<{
+    day: string;
+    count: number;
+  }>;
+  topBeans: Array<{
+    beanId: string;
+    beanName: string;
+    scanCount: number;
+    percentage: number;
+  }>;
+  topLocations: Array<{
+    country: string;
+    city?: string;
+    count: number;
+    percentage: number;
+  }>;
+  deviceStats: {
+    mobile: number;
+    desktop: number;
+    tablet: number;
+  };
+  conversionRate?: number; // 스캔 → 구매 전환율
+}
+
+export interface BeanPerformance {
+  beanId: string;
+  beanName: string;
+  totalScans: number;
+  uniqueScans: number;
+  averageScansPerDay: number;
+  peakScanTime: string;
+  popularityTrend: 'increasing' | 'decreasing' | 'stable';
+  trendPercentage: number;
+  lastScanDate?: Date;
+  conversionRate?: number;
+  revenue?: number;
+}
+
+export interface LocationAnalytics {
+  country: string;
+  city?: string;
+  region?: string;
+  totalScans: number;
+  uniqueUsers: number;
+  topBeans: Array<{
+    beanName: string;
+    scanCount: number;
+  }>;
+  timeDistribution: Array<{
+    hour: number;
+    count: number;
+  }>;
+}
+
+export interface RealtimeStats {
+  currentActiveUsers: number;
+  scansInLastHour: number;
+  scansInLastDay: number;
+  topScanningBean: string;
+  recentScans: NFCScanEvent[];
+  alertsCount: number;
+  systemHealth: 'good' | 'warning' | 'critical';
+}
+
+export interface AnalyticsFilter {
+  dateRange: AnalyticsTimeRange;
+  beanIds?: string[];
+  locations?: string[];
+  deviceTypes?: ('mobile' | 'desktop' | 'tablet')[];
+  includeTestScans?: boolean;
 } 

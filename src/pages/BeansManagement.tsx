@@ -31,6 +31,8 @@ import {
   Snackbar,
   InputAdornment,
   Autocomplete,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -43,8 +45,46 @@ import {
   Link as LinkIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
+  CloudSync as CloudSyncIcon,
+  TableChart as TableChartIcon,
+  QrCode as QrCodeIcon,
 } from '@mui/icons-material';
 import type { CoffeeBean } from '../types';
+import GoogleSheetsSync from '../components/GoogleSheetsSync';
+import URLManager from '../components/URLManager';
+
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`simple-tabpanel-${index}`}
+      aria-labelledby={`simple-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
+
+function a11yProps(index: number) {
+  return {
+    id: `simple-tab-${index}`,
+    'aria-controls': `simple-tabpanel-${index}`,
+  };
+}
 
 const BeansManagement = () => {
   const [beans, setBeans] = useState<CoffeeBean[]>([]);
@@ -57,6 +97,7 @@ const BeansManagement = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingBean, setEditingBean] = useState<CoffeeBean | null>(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [tabValue, setTabValue] = useState(0);
 
   // 폼 상태
   const [formData, setFormData] = useState({
@@ -268,132 +309,137 @@ const BeansManagement = () => {
     totalStock: beans.reduce((sum, bean) => sum + (bean.saleInfo?.stock || 0), 0)
   };
 
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
+
   return (
     <Box sx={{ p: 3 }}>
-      {/* 헤더 */}
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Box>
-          <Typography variant="h4" component="h1" gutterBottom>
-            원두 관리
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            커피 원두 정보를 관리하고 NFC 연동을 설정합니다
-          </Typography>
-        </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenDialog()}
-          size="large"
-        >
-          원두 추가
-        </Button>
-      </Box>
+      <Typography variant="h4" gutterBottom sx={{ 
+        background: 'linear-gradient(45deg, #6366f1, #8b5cf6)',
+        backgroundClip: 'text',
+        WebkitBackgroundClip: 'text',
+        color: 'transparent',
+        fontWeight: 'bold',
+        mb: 3
+      }}>
+        ☕ 원두 관리
+      </Typography>
 
-      {/* 통계 카드 */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr 1fr' }, gap: 3, mb: 3 }}>
-        <Card>
-          <CardContent>
-            <Typography color="text.secondary" gutterBottom>
-              총 원두
-            </Typography>
-            <Typography variant="h4">
-              {stats.total}
-            </Typography>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <Typography color="text.secondary" gutterBottom>
-              활성 원두
-            </Typography>
-            <Typography variant="h4" color="success.main">
-              {stats.active}
-            </Typography>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <Typography color="text.secondary" gutterBottom>
-              판매 중
-            </Typography>
-            <Typography variant="h4" color="primary.main">
-              {stats.forSale}
-            </Typography>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent>
-            <Typography color="text.secondary" gutterBottom>
-              총 재고
-            </Typography>
-            <Typography variant="h4">
-              {stats.totalStock}
-            </Typography>
-          </CardContent>
-        </Card>
-      </Box>
-
-      {/* 검색 및 필터 */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr 1fr' }, gap: 2, alignItems: 'center' }}>
-          <TextField
-            fullWidth
-            placeholder="원두명, 원산지, 품종으로 검색..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
+      {/* 탭 네비게이션 */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs value={tabValue} onChange={handleTabChange} aria-label="원두 관리 탭">
+          <Tab 
+            icon={<TableChartIcon />} 
+            label="원두 목록" 
+            {...a11yProps(0)} 
+            sx={{ minHeight: 64 }}
           />
-          <FormControl fullWidth>
-            <InputLabel>원산지</InputLabel>
-            <Select
-              value={filterOrigin}
-              label="원산지"
-              onChange={(e) => setFilterOrigin(e.target.value)}
-            >
-              <MenuItem value="">전체</MenuItem>
-              {uniqueOrigins.map(origin => (
-                <MenuItem key={origin} value={origin}>{origin}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl fullWidth>
-            <InputLabel>프로세싱</InputLabel>
-            <Select
-              value={filterProcess}
-              label="프로세싱"
-              onChange={(e) => setFilterProcess(e.target.value)}
-            >
-              <MenuItem value="">전체</MenuItem>
-              {uniqueProcesses.map(process => (
-                <MenuItem key={process} value={process}>{process}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <Button
-            fullWidth
-            variant="outlined"
-            startIcon={<FilterIcon />}
-            onClick={() => {
-              setFilterOrigin('');
-              setFilterProcess('');
-              setSearchTerm('');
-            }}
-          >
-            초기화
-          </Button>
-        </Box>
-      </Paper>
+          <Tab 
+            icon={<CloudSyncIcon />} 
+            label="구글 시트 연동" 
+            {...a11yProps(1)} 
+            sx={{ minHeight: 64 }}
+          />
+          <Tab 
+            icon={<QrCodeIcon />} 
+            label="URL 관리" 
+            {...a11yProps(2)} 
+            sx={{ minHeight: 64 }}
+          />
+        </Tabs>
+      </Box>
 
-      {/* 원두 테이블 */}
-      <Paper>
-        <TableContainer>
+      {/* 원두 목록 탭 */}
+      <TabPanel value={tabValue} index={0}>
+        {/* 기존 원두 관리 UI */}
+        {/* 통계 카드 */}
+        <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+          <Card sx={{ flex: 1, minWidth: 200, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ color: 'white' }}>전체 원두</Typography>
+              <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
+                {beans.length}
+              </Typography>
+            </CardContent>
+          </Card>
+          
+          <Card sx={{ flex: 1, minWidth: 200, background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ color: 'white' }}>활성 원두</Typography>
+              <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
+                {beans.filter(bean => bean.isActive).length}
+              </Typography>
+            </CardContent>
+          </Card>
+          
+          <Card sx={{ flex: 1, minWidth: 200, background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ color: 'white' }}>판매 중</Typography>
+              <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
+                {beans.filter(bean => bean.saleInfo?.isForSale).length}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Box>
+
+        {/* 검색 및 필터 */}
+        <Paper sx={{ p: 2, mb: 3 }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            <TextField
+              placeholder="원두명, 원산지, 품종으로 검색..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
+              }}
+              sx={{ flex: 1, minWidth: 250 }}
+            />
+            
+            <FormControl sx={{ minWidth: 120 }}>
+              <InputLabel>원산지</InputLabel>
+              <Select
+                value={filterOrigin}
+                label="원산지"
+                onChange={(e) => setFilterOrigin(e.target.value)}
+              >
+                <MenuItem value="">전체</MenuItem>
+                {Array.from(new Set(beans.map(bean => bean.origin))).map(origin => (
+                  <MenuItem key={origin} value={origin}>{origin}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            <FormControl sx={{ minWidth: 120 }}>
+              <InputLabel>프로세싱</InputLabel>
+              <Select
+                value={filterProcess}
+                label="프로세싱"
+                onChange={(e) => setFilterProcess(e.target.value)}
+              >
+                <MenuItem value="">전체</MenuItem>
+                {Array.from(new Set(beans.map(bean => bean.process))).map(process => (
+                  <MenuItem key={process} value={process}>{process}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => handleOpenDialog()}
+              sx={{ 
+                background: 'linear-gradient(45deg, #6366f1, #8b5cf6)',
+                '&:hover': { background: 'linear-gradient(45deg, #5855eb, #7c3aed)' }
+              }}
+            >
+              원두 추가
+            </Button>
+          </Box>
+        </Paper>
+
+        {/* 원두 테이블 */}
+        <TableContainer component={Paper}>
           <Table>
             <TableHead>
               <TableRow>
@@ -512,6 +558,8 @@ const BeansManagement = () => {
             </TableBody>
           </Table>
         </TableContainer>
+
+        {/* 페이지네이션 */}
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
@@ -524,7 +572,17 @@ const BeansManagement = () => {
             setPage(0);
           }}
         />
-      </Paper>
+      </TabPanel>
+
+      {/* 구글 시트 연동 탭 */}
+      <TabPanel value={tabValue} index={1}>
+        <GoogleSheetsSync />
+      </TabPanel>
+
+      {/* URL 관리 탭 */}
+      <TabPanel value={tabValue} index={2}>
+        <URLManager />
+      </TabPanel>
 
       {/* 원두 추가/수정 다이얼로그 */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>

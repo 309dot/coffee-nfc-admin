@@ -3,6 +3,7 @@ import {
   Box,
   Card,
   CardContent,
+  CardActions,
   Typography,
   Paper,
   LinearProgress,
@@ -16,6 +17,9 @@ import {
   IconButton,
   Tooltip,
   Alert,
+  Grid,
+  Button,
+  ListItemIcon,
 } from '@mui/material';
 import {
   Coffee as CoffeeIcon,
@@ -26,6 +30,9 @@ import {
   Analytics as AnalyticsIcon,
   People as PeopleIcon,
   AttachMoney as MoneyIcon,
+  Assessment as AssessmentIcon,
+  LocationOn as LocationIcon,
+  Devices as DevicesIcon,
 } from '@mui/icons-material';
 import {
   XAxis,
@@ -41,10 +48,15 @@ import {
   AreaChart,
   Area,
 } from 'recharts';
-import type { DashboardStats } from '../types';
+import type { DashboardStats, ScanAnalytics, RealtimeStats } from '../types';
+import { useNavigate } from 'react-router-dom';
+import { analyticsService } from '../services/analytics';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [scanAnalytics, setScanAnalytics] = useState<ScanAnalytics | null>(null);
+  const [realtimeStats, setRealtimeStats] = useState<RealtimeStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
@@ -61,62 +73,54 @@ const Dashboard = () => {
   }, []);
 
   const loadDashboardData = async () => {
+    setLoading(true);
     try {
-      // 실제 API 호출 대신 localStorage와 임시 데이터 조합
-      const savedBeans = localStorage.getItem('coffee-beans');
-      const beans = savedBeans ? JSON.parse(savedBeans) : [];
+      const [analytics, realtime] = await Promise.all([
+        analyticsService.getScanAnalytics(),
+        analyticsService.getRealtimeStats()
+      ]);
+
+      setScanAnalytics(analytics);
+      setRealtimeStats(realtime);
       
-      const mockStats: DashboardStats = {
+      // DashboardStats 구조에 맞게 데이터 변환
+      const dashboardStats: DashboardStats = {
         nfcStats: {
-          totalScans: 1247 + Math.floor(Math.random() * 10),
-          todayScans: 89 + Math.floor(Math.random() * 5),
-          weeklyScans: 456 + Math.floor(Math.random() * 20),
-          monthlyScans: 1247 + Math.floor(Math.random() * 50),
-          mostScannedBean: 'Addisu Hulichaye, Ethiopia',
-          scansByHour: Array.from({ length: 24 }, (_, hour) => ({
-            hour,
-            count: Math.floor(Math.random() * 40) + (hour >= 7 && hour <= 22 ? 10 : 0)
-          }))
+          totalScans: analytics.totalScans,
+          todayScans: realtime.scansInLastDay,
+          weeklyScans: analytics.totalScans,
+          monthlyScans: analytics.totalScans,
+          mostScannedBean: realtime.topScanningBean,
+          scansByHour: analytics.scansByHour
         },
         beanStats: {
-          totalBeans: beans.length || 12,
-          activeBeans: beans.filter((b: any) => b.isActive).length || 10,
-          beansForSale: beans.filter((b: any) => b.saleInfo?.isForSale).length || 8,
-          popularBeans: [
-            { name: 'Addisu Hulichaye', scanCount: 234 },
-            { name: 'Geisha Panama', scanCount: 189 },
-            { name: 'Blue Mountain', scanCount: 156 },
-            { name: 'Kona Hawaii', scanCount: 134 },
-            { name: 'Yirgacheffe', scanCount: 98 }
-          ]
+          totalBeans: analytics.topBeans.length,
+          activeBeans: analytics.topBeans.length,
+          beansForSale: analytics.topBeans.length,
+          popularBeans: analytics.topBeans.map(bean => ({
+            name: bean.beanName,
+            scanCount: bean.scanCount
+          }))
         },
         salesStats: {
-          totalRevenue: 2450000,
-          monthlyRevenue: 890000 + Math.floor(Math.random() * 100000),
-          topSellingBeans: [
-            { name: 'Addisu Hulichaye', sales: 45 },
-            { name: 'Geisha Panama', sales: 32 },
-            { name: 'Blue Mountain', sales: 28 }
-          ],
-          conversionRate: 12.5 + Math.random() * 2
+          totalRevenue: 0,
+          monthlyRevenue: 0,
+          topSellingBeans: [],
+          conversionRate: analytics.conversionRate || 0
         },
         geoStats: {
-          topCountries: [
-            { country: '대한민국', count: 1089 },
-            { country: '일본', count: 89 },
-            { country: '미국', count: 45 },
-            { country: '중국', count: 24 }
-          ],
-          topCities: [
-            { city: '서울', count: 567 },
-            { city: '부산', count: 234 },
-            { city: '대구', count: 156 },
-            { city: '인천', count: 132 }
-          ]
+          topCountries: analytics.topLocations.map(loc => ({
+            country: loc.country,
+            count: loc.count
+          })),
+          topCities: analytics.topLocations.map(loc => ({
+            city: loc.city || 'Unknown',
+            count: loc.count
+          }))
         }
       };
-
-      setStats(mockStats);
+      
+      setStats(dashboardStats);
       setLastUpdated(new Date());
     } catch (error) {
       console.error('대시보드 데이터 로드 실패:', error);
@@ -189,82 +193,86 @@ const Dashboard = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* 헤더 */}
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Box>
-          <Typography variant="h4" component="h1" gutterBottom>
-            대시보드
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            M1CT 커피 NFC 코스터 관리 현황
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Typography variant="caption" color="text.secondary">
-            마지막 업데이트: {lastUpdated.toLocaleTimeString()}
-          </Typography>
-          <Tooltip title="새로고침">
-            <IconButton onClick={loadDashboardData} disabled={loading}>
-              <RefreshIcon />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      </Box>
+      <Typography variant="h4" gutterBottom sx={{ 
+        background: 'linear-gradient(45deg, #6366f1, #8b5cf6)',
+        backgroundClip: 'text',
+        WebkitBackgroundClip: 'text',
+        color: 'transparent',
+        fontWeight: 'bold',
+        mb: 3
+      }}>
+        ☕ 관리자 대시보드
+      </Typography>
 
-      {/* 실시간 알림 */}
-      <Alert severity="info" sx={{ mb: 3 }}>
-        <Typography variant="body2">
-          실시간 모니터링 중 • 현재 활성 사용자: {Math.floor(Math.random() * 15) + 5}명 • 
-          최근 스캔: {stats.nfcStats.mostScannedBean}
-        </Typography>
-      </Alert>
+      {/* 실시간 통계 카드 */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr 1fr' }, gap: 3, mb: 4 }}>
+        <Card sx={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box>
+                <Typography variant="h6" sx={{ color: 'white' }}>총 스캔</Typography>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
+                  {scanAnalytics?.totalScans.toLocaleString() || 'N/A'}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                  고유: {scanAnalytics?.uniqueScans.toLocaleString() || 'N/A'}
+                </Typography>
+              </Box>
+              <VisibilityIcon sx={{ fontSize: 40, color: 'rgba(255,255,255,0.8)' }} />
+            </Box>
+          </CardContent>
+        </Card>
 
-      {/* 통계 카드 */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr 1fr' }, gap: 3, mb: 4 }}>
-        {statCards.map((card, index) => {
-          const Icon = card.icon;
-          return (
-            <Card 
-              key={index}
-              sx={{ 
-                height: '100%',
-                background: card.bgGradient,
-                color: 'white',
-                transition: 'transform 0.2s ease-in-out',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: 6
-                }
-              }}
-            >
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Box>
-                    <Typography variant="h4" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
-                      {card.value}
-                    </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                      {card.title}
-                    </Typography>
-                    <Chip 
-                      label={card.change} 
-                      size="small" 
-                      sx={{ 
-                        mt: 1, 
-                        backgroundColor: 'rgba(255,255,255,0.2)',
-                        color: 'white',
-                        fontWeight: 'bold'
-                      }} 
-                    />
-                  </Box>
-                  <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 56, height: 56 }}>
-                    <Icon sx={{ fontSize: 30 }} />
-                  </Avatar>
-                </Box>
-              </CardContent>
-            </Card>
-          );
-        })}
+        <Card sx={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box>
+                <Typography variant="h6" sx={{ color: 'white' }}>활성 사용자</Typography>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
+                  {realtimeStats?.currentActiveUsers || 0}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                  1시간: {realtimeStats?.scansInLastHour || 0}
+                </Typography>
+              </Box>
+              <PeopleIcon sx={{ fontSize: 40, color: 'rgba(255,255,255,0.8)' }} />
+            </Box>
+          </CardContent>
+        </Card>
+
+        <Card sx={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box>
+                <Typography variant="h6" sx={{ color: 'white' }}>전환율</Typography>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
+                  {(scanAnalytics?.conversionRate || 0).toFixed(1)}%
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                  스캔 → 구매
+                </Typography>
+              </Box>
+              <AssessmentIcon sx={{ fontSize: 40, color: 'rgba(255,255,255,0.8)' }} />
+            </Box>
+          </CardContent>
+        </Card>
+
+        <Card sx={{ background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box>
+                <Typography variant="h6" sx={{ color: 'white' }}>인기 원두</Typography>
+                <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
+                  {realtimeStats?.topScanningBean || 'N/A'}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                  오늘의 TOP
+                </Typography>
+              </Box>
+              <CoffeeIcon sx={{ fontSize: 40, color: 'rgba(255,255,255,0.8)' }} />
+            </Box>
+          </CardContent>
+        </Card>
       </Box>
 
       {/* 차트 섹션 */}
@@ -389,37 +397,23 @@ const Dashboard = () => {
             <PeopleIcon color="action" />
           </Box>
           <List sx={{ maxHeight: 300, overflow: 'auto' }}>
-            {[
-              { user: '사용자 A', action: 'Geisha Panama 스캔', time: '방금 전', avatar: '🇰🇷' },
-              { user: '사용자 B', action: 'Blue Mountain 구매', time: '2분 전', avatar: '🇯🇵' },
-              { user: '사용자 C', action: 'Addisu Hulichaye 스캔', time: '5분 전', avatar: '🇺🇸' },
-              { user: '사용자 D', action: 'Kona Hawaii 스캔', time: '8분 전', avatar: '🇰🇷' },
-              { user: '사용자 E', action: 'Yirgacheffe 구매', time: '12분 전', avatar: '🇨🇳' },
-              { user: '사용자 F', action: 'Geisha Panama 스캔', time: '15분 전', avatar: '🇰🇷' },
-            ].map((activity, index) => (
-              <React.Fragment key={index}>
-                <ListItem>
-                  <ListItemAvatar>
-                    <Avatar sx={{ bgcolor: 'primary.light', fontSize: '1.2rem' }}>
-                      {activity.avatar}
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={
-                      <Typography variant="body2" fontWeight="medium">
-                        {activity.action}
-                      </Typography>
-                    }
-                    secondary={
-                      <Typography variant="caption" color="text.secondary">
-                        {activity.user} • {activity.time}
-                      </Typography>
-                    }
-                  />
-                </ListItem>
-                {index < 5 && <Divider variant="inset" component="li" />}
-              </React.Fragment>
-            ))}
+            {realtimeStats?.recentScans.slice(0, 5).map((scan, index) => (
+              <ListItem key={scan.id} sx={{ px: 0 }}>
+                <ListItemIcon>
+                  <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>
+                    📱
+                  </Avatar>
+                </ListItemIcon>
+                <ListItemText
+                  primary={`${scan.location?.city || 'Unknown'}, ${scan.location?.country || 'Unknown'}`}
+                  secondary={`${scan.device?.type} • ${scan.timestamp.toLocaleTimeString()}`}
+                />
+              </ListItem>
+            )) || (
+              <ListItem>
+                <ListItemText primary="최근 활동이 없습니다." />
+              </ListItem>
+            )}
           </List>
         </Paper>
       </Box>
@@ -505,6 +499,206 @@ const Dashboard = () => {
             </Box>
           </Box>
         </Paper>
+      </Box>
+
+      {/* 빠른 액션 카드 */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2, mt: 3 }}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              🚀 빠른 액션
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<CoffeeIcon />}
+                onClick={() => navigate('/beans')}
+                sx={{ mb: 1 }}
+              >
+                원두 관리
+              </Button>
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<AssessmentIcon />}
+                onClick={() => navigate('/analytics')}
+                sx={{ mb: 1 }}
+              >
+                분석 보기
+              </Button>
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<TrendingUpIcon />}
+                onClick={() => navigate('/beans')}
+              >
+                URL 관리
+              </Button>
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<ScheduleIcon />}
+                onClick={() => navigate('/beans')}
+              >
+                시트 연동
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+
+        {/* 인기 원두 TOP 5 */}
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              🏆 인기 원두 TOP 5
+            </Typography>
+            <List>
+              {scanAnalytics?.topBeans.slice(0, 5).map((bean, index) => (
+                <ListItem key={bean.beanId} sx={{ px: 0 }}>
+                  <ListItemIcon>
+                    <Avatar sx={{ 
+                      bgcolor: index === 0 ? 'gold' : index === 1 ? 'silver' : index === 2 ? '#cd7f32' : 'primary.main',
+                      width: 32, 
+                      height: 32 
+                    }}>
+                      {index + 1}
+                    </Avatar>
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={bean.beanName}
+                    secondary={`${bean.scanCount}회 스캔 (${bean.percentage.toFixed(1)}%)`}
+                  />
+                </ListItem>
+              )) || (
+                <ListItem>
+                  <ListItemText primary="데이터를 로딩 중입니다..." />
+                </ListItem>
+              )}
+            </List>
+          </CardContent>
+          <CardActions>
+            <Button size="small" onClick={() => navigate('/analytics')}>
+              전체 분석 보기
+            </Button>
+          </CardActions>
+        </Card>
+
+        {/* 디바이스 통계 */}
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              📱 디바이스 분포
+            </Typography>
+            <Box sx={{ mb: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2">모바일</Typography>
+                <Typography variant="body2">
+                  {scanAnalytics?.deviceStats.mobile || 0}
+                </Typography>
+              </Box>
+              <LinearProgress 
+                variant="determinate" 
+                value={((scanAnalytics?.deviceStats.mobile || 0) / (scanAnalytics?.totalScans || 1)) * 100}
+                sx={{ height: 8, borderRadius: 4, mb: 2 }}
+              />
+            </Box>
+            
+            <Box sx={{ mb: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2">데스크톱</Typography>
+                <Typography variant="body2">
+                  {scanAnalytics?.deviceStats.desktop || 0}
+                </Typography>
+              </Box>
+              <LinearProgress 
+                variant="determinate" 
+                value={((scanAnalytics?.deviceStats.desktop || 0) / (scanAnalytics?.totalScans || 1)) * 100}
+                sx={{ height: 8, borderRadius: 4, mb: 2 }}
+              />
+            </Box>
+            
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2">태블릿</Typography>
+                <Typography variant="body2">
+                  {scanAnalytics?.deviceStats.tablet || 0}
+                </Typography>
+              </Box>
+              <LinearProgress 
+                variant="determinate" 
+                value={((scanAnalytics?.deviceStats.tablet || 0) / (scanAnalytics?.totalScans || 1)) * 100}
+                sx={{ height: 8, borderRadius: 4 }}
+              />
+            </Box>
+          </CardContent>
+        </Card>
+
+        {/* 최근 활동 */}
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              ⚡ 최근 스캔 활동
+            </Typography>
+            <List>
+              {realtimeStats?.recentScans.slice(0, 5).map((scan, index) => (
+                <ListItem key={scan.id} sx={{ px: 0 }}>
+                  <ListItemIcon>
+                    <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>
+                      📱
+                    </Avatar>
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={`${scan.location?.city || 'Unknown'}, ${scan.location?.country || 'Unknown'}`}
+                    secondary={`${scan.device?.type} • ${scan.timestamp.toLocaleTimeString()}`}
+                  />
+                </ListItem>
+              )) || (
+                <ListItem>
+                  <ListItemText primary="최근 활동이 없습니다." />
+                </ListItem>
+              )}
+            </List>
+          </CardContent>
+          <CardActions>
+            <Button size="small" onClick={() => navigate('/analytics')}>
+              실시간 모니터링
+            </Button>
+          </CardActions>
+        </Card>
+
+        {/* 시스템 상태 */}
+        <Box sx={{ gridColumn: '1 / -1' }}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              🔧 시스템 상태
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <Chip 
+                label={`시스템: ${realtimeStats?.systemHealth === 'good' ? '정상' : '경고'}`}
+                color={realtimeStats?.systemHealth === 'good' ? 'success' : 'warning'}
+              />
+              <Chip 
+                label={`24시간 스캔: ${realtimeStats?.scansInLastDay || 0}`}
+                color="info"
+              />
+              <Chip 
+                label={`알림: ${realtimeStats?.alertsCount || 0}개`}
+                color={realtimeStats?.alertsCount === 0 ? 'success' : 'warning'}
+              />
+              <Chip 
+                label="실시간 업데이트: 활성"
+                color="success"
+              />
+            </Box>
+            
+            {realtimeStats?.systemHealth !== 'good' && (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                시스템에 주의가 필요한 상황이 감지되었습니다. 상세한 내용은 분석 페이지에서 확인하세요.
+              </Alert>
+            )}
+          </Paper>
+        </Box>
       </Box>
     </Box>
   );

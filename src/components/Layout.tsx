@@ -44,12 +44,12 @@ const Layout = ({ children }: LayoutProps) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
 
-  const navigation = [
-    { name: '대시보드', href: '/dashboard', icon: DashboardIcon },
-    { name: '원두 관리', href: '/beans', icon: CoffeeIcon },
-    { name: 'NFC 관리', href: '/nfc', icon: NfcIcon },
-    { name: '카페 관리', href: '/cafe', icon: StoreIcon },
-    { name: '분석', href: '/analytics', icon: AnalyticsIcon },
+  const menuItems = [
+    { text: '대시보드', icon: <DashboardIcon />, path: '/dashboard' },
+    { text: '원두 관리', icon: <CoffeeIcon />, path: '/beans' },
+    { text: 'NFC 관리', icon: <NfcIcon />, path: '/nfc' },
+    { text: '분석', icon: <AnalyticsIcon />, path: '/analytics' },
+    { text: '카페 정보', icon: <StoreIcon />, path: '/cafe' },
   ];
 
   const isActive = (href: string) => {
@@ -91,15 +91,14 @@ const Layout = ({ children }: LayoutProps) => {
 
       {/* 네비게이션 메뉴 */}
       <List sx={{ flex: 1, px: 2, py: 2 }}>
-        {navigation.map((item) => {
-          const Icon = item.icon;
-          const active = isActive(item.href);
+        {menuItems.map((item) => {
+          const active = isActive(item.path);
           
           return (
-            <ListItem key={item.name} disablePadding sx={{ mb: 0.5 }}>
+            <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
               <ListItemButton
                 component={Link}
-                to={item.href}
+                to={item.path}
                 selected={active}
                 onClick={() => isMobile && setMobileOpen(false)}
                 sx={{
@@ -115,10 +114,10 @@ const Layout = ({ children }: LayoutProps) => {
                 }}
               >
                 <ListItemIcon sx={{ minWidth: 40 }}>
-                  <Icon />
+                  {item.icon}
                 </ListItemIcon>
                 <ListItemText 
-                  primary={item.name}
+                  primary={item.text}
                   primaryTypographyProps={{
                     fontWeight: active ? 600 : 500,
                     fontSize: '0.95rem',
@@ -201,7 +200,7 @@ const Layout = ({ children }: LayoutProps) => {
           </IconButton>
           
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
-            {navigation.find(item => isActive(item.href))?.name || '대시보드'}
+            {menuItems.find(item => isActive(item.path))?.text || '대시보드'}
           </Typography>
 
           <Chip

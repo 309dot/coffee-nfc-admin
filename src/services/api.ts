@@ -1,4 +1,4 @@
-import type { CoffeeBean, NFCChip, DashboardStats, CafeInfo } from '../types';
+import type { CoffeeBean, NFCChip, DashboardStats, CafeInfo, SocialMedia } from '../types';
 
 // API 기본 설정
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
@@ -86,13 +86,101 @@ class ApiService {
 
   // 카페 정보 API
   async getCafeInfo(): Promise<CafeInfo> {
-    return this.request<CafeInfo>('/cafe');
+    // 실제 환경에서는 API 호출
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          id: 'cafe-001',
+          name: 'M1CT Coffee',
+          description: '최고급 스페셜티 커피와 NFC 기술이 만나는 혁신적인 카페입니다.',
+          logo: '/logo.png',
+          address: {
+            street: '서울특별시 강남구 테헤란로 123',
+            city: '서울',
+            zipCode: '06142',
+            coordinates: {
+              lat: 37.5665,
+              lng: 126.9780
+            }
+          },
+          contact: {
+            phone: '02-1234-5678',
+            email: 'info@m1ct.coffee',
+            website: 'https://m1ct.coffee'
+          },
+          businessHours: {
+            monday: { open: '07:00', close: '22:00', isClosed: false },
+            tuesday: { open: '07:00', close: '22:00', isClosed: false },
+            wednesday: { open: '07:00', close: '22:00', isClosed: false },
+            thursday: { open: '07:00', close: '22:00', isClosed: false },
+            friday: { open: '07:00', close: '23:00', isClosed: false },
+            saturday: { open: '08:00', close: '23:00', isClosed: false },
+            sunday: { open: '08:00', close: '21:00', isClosed: false }
+          }
+        });
+      }, 500);
+    });
   }
 
-  async updateCafeInfo(info: Partial<CafeInfo>): Promise<CafeInfo> {
-    return this.request<CafeInfo>('/cafe', {
-      method: 'PUT',
-      body: JSON.stringify(info),
+  async updateCafeInfo(updates: Partial<CafeInfo>): Promise<CafeInfo> {
+    // 실제 환경에서는 API 호출
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        // 업데이트된 카페 정보 반환
+        resolve(updates as CafeInfo);
+      }, 500);
+    });
+  }
+
+  async getSocialMediaAccounts(): Promise<SocialMedia[]> {
+    // 실제 환경에서는 API 호출
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve([
+          {
+            platform: 'instagram',
+            handle: '@m1ct_coffee',
+            url: 'https://instagram.com/m1ct_coffee',
+            isActive: true,
+            followerCount: 12500,
+            lastUpdated: new Date()
+          },
+          {
+            platform: 'facebook',
+            handle: 'M1CT Coffee',
+            url: 'https://facebook.com/m1ctcoffee',
+            isActive: true,
+            followerCount: 8200,
+            lastUpdated: new Date()
+          }
+        ]);
+      }, 500);
+    });
+  }
+
+  async updateSocialMediaAccount(platform: string, updates: Partial<SocialMedia>): Promise<SocialMedia> {
+    // 실제 환경에서는 API 호출
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          platform: platform as any,
+          handle: updates.handle || '',
+          url: updates.url || '',
+          isActive: updates.isActive || false,
+          followerCount: updates.followerCount,
+          lastUpdated: new Date()
+        });
+      }, 500);
+    });
+  }
+
+  async uploadCafeLogo(file: File): Promise<string> {
+    // 실제 환경에서는 파일 업로드 API 호출
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const logoUrl = URL.createObjectURL(file);
+        resolve(logoUrl);
+      }, 1000);
     });
   }
 
@@ -107,6 +195,28 @@ class ApiService {
   // 구글 시트 연동 API
   async syncWithGoogleSheets(): Promise<{ success: boolean; message: string }> {
     return this.request<{ success: boolean; message: string }>('/sync/sheets', {
+      method: 'POST',
+    });
+  }
+
+  // 구글 시트 설정 저장
+  async saveGoogleSheetsConfig(config: any): Promise<{ success: boolean; message: string }> {
+    return this.request<{ success: boolean; message: string }>('/sync/sheets/config', {
+      method: 'POST',
+      body: JSON.stringify(config),
+    });
+  }
+
+  // 구글 시트에서 데이터 가져오기
+  async importFromGoogleSheets(): Promise<{ success: boolean; message: string; data?: any[] }> {
+    return this.request<{ success: boolean; message: string; data?: any[] }>('/sync/sheets/import', {
+      method: 'POST',
+    });
+  }
+
+  // 구글 시트로 데이터 내보내기
+  async exportToGoogleSheets(): Promise<{ success: boolean; message: string }> {
+    return this.request<{ success: boolean; message: string }>('/sync/sheets/export', {
       method: 'POST',
     });
   }
